@@ -12,7 +12,7 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch {}
-  return { holidayDates: [], lunchPrepared: {} };
+  return { holidayDates: [], lunchPrepared: {}, overrides: {} };
 }
 
 function saveState(state) {
@@ -30,6 +30,12 @@ export default function App() {
     return saved.lunchPrepared || {};
   });
 
+  // overrides: { "2026-04-02": { breakfast: "SHOTA"|"RENA"|"EACH", ... } }
+  const [overrides, setOverridesMap] = useState(() => {
+    const saved = loadState();
+    return saved.overrides || {};
+  });
+
   const [weekOffset, setWeekOffset] = useState(0);
 
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -39,8 +45,27 @@ export default function App() {
     saveState({
       holidayDates: [...holidayDates],
       lunchPrepared: lunchPreparedMap,
+      overrides,
     });
-  }, [holidayDates, lunchPreparedMap]);
+  }, [holidayDates, lunchPreparedMap, overrides]);
+
+  const setOverride = (dateKey, meal, personKey) => {
+    setOverridesMap((prev) => {
+      const day = { ...(prev[dateKey] || {}) };
+      if (personKey === null) {
+        delete day[meal];
+      } else {
+        day[meal] = personKey;
+      }
+      const next = { ...prev };
+      if (Object.keys(day).length === 0) {
+        delete next[dateKey];
+      } else {
+        next[dateKey] = day;
+      }
+      return next;
+    });
+  };
 
   const toggleHoliday = (dateKey) => {
     setHolidayDates((prev) => {
@@ -73,7 +98,7 @@ export default function App() {
 
       <main className="max-w-lg mx-auto px-4 mt-4 space-y-4">
         {/* Today's overview */}
-        <TodayCard holidayDates={holidayDates} />
+        <TodayCard holidayDates={holidayDates} overrides={overrides} setOverride={setOverride} />
 
         {/* Holiday toggle */}
         <HolidayToggle holidayDates={holidayDates} toggleHoliday={toggleHoliday} />
@@ -90,6 +115,8 @@ export default function App() {
           holidayDates={holidayDates}
           weekOffset={weekOffset}
           setWeekOffset={setWeekOffset}
+          overrides={overrides}
+          setOverride={setOverride}
         />
 
         {/* Exception rules */}

@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getDuty, DAYS } from '../scheduleRules';
+import { getDutyWithOverrides, DAYS, personToKey, nextPerson } from '../scheduleRules';
 
 function getWeekDates(baseDate) {
   const d = new Date(baseDate);
@@ -21,7 +21,7 @@ function isSameDay(a, b) {
     a.getDate() === b.getDate();
 }
 
-export default function Dashboard({ holidayDates, weekOffset, setWeekOffset }) {
+export default function Dashboard({ holidayDates, weekOffset, setWeekOffset, overrides, setOverride }) {
   const today = new Date();
   const baseDate = new Date(today);
   baseDate.setDate(baseDate.getDate() + weekOffset * 7);
@@ -59,7 +59,8 @@ export default function Dashboard({ holidayDates, weekOffset, setWeekOffset }) {
           const isWeekend = dow === 0 || dow === 6;
           const dateKey = date.toISOString().slice(0, 10);
           const isHoliday = holidayDates.has(dateKey);
-          const duty = getDuty(date, isHoliday);
+          const duty = getDutyWithOverrides(date, isHoliday, overrides);
+          const dayOverride = overrides[dateKey] || {};
 
           return (
             <div
@@ -92,9 +93,18 @@ export default function Dashboard({ holidayDates, weekOffset, setWeekOffset }) {
 
               {/* Meals */}
               <div className="mt-2 space-y-1 text-center w-full">
-                <MealRow label="朝" person={duty.breakfast} />
-                <MealRow label="昼" person={duty.lunch} />
-                <MealRow label="夜" person={duty.dinner} />
+                <MealRow label="朝" person={duty.breakfast} isOverridden={!!dayOverride.breakfast} onTap={() => {
+                  const cur = dayOverride.breakfast || personToKey(duty.breakfast);
+                  setOverride(dateKey, 'breakfast', nextPerson(cur, 'breakfast'));
+                }} />
+                <MealRow label="昼" person={duty.lunch} isOverridden={!!dayOverride.lunch} onTap={() => {
+                  const cur = dayOverride.lunch || personToKey(duty.lunch);
+                  setOverride(dateKey, 'lunch', nextPerson(cur, 'lunch'));
+                }} />
+                <MealRow label="夜" person={duty.dinner} isOverridden={!!dayOverride.dinner} onTap={() => {
+                  const cur = dayOverride.dinner || personToKey(duty.dinner);
+                  setOverride(dateKey, 'dinner', nextPerson(cur, 'dinner'));
+                }} />
               </div>
             </div>
           );
@@ -104,11 +114,16 @@ export default function Dashboard({ holidayDates, weekOffset, setWeekOffset }) {
   );
 }
 
-function MealRow({ label, person }) {
+function MealRow({ label, person, isOverridden, onTap }) {
   return (
-    <div className="flex items-center justify-center gap-0.5">
+    <button
+      onClick={onTap}
+      className={`w-full flex items-center justify-center gap-0.5 rounded active:opacity-60 transition ${
+        isOverridden ? 'bg-amber-50 ring-1 ring-amber-300 rounded' : ''
+      }`}
+    >
       <span className="text-[10px] text-gray-400">{label}</span>
       <span className="text-base leading-none">{person.emoji}</span>
-    </div>
+    </button>
   );
 }

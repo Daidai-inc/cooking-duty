@@ -74,4 +74,44 @@ export function getPrevNightDuty(date, isHoliday = false) {
   return getDuty(prevDate, isHoliday).dinner;
 }
 
+const PERSON_MAP = { SHOTA, RENA, EACH };
+
+/**
+ * getDuty の結果にオーバーライドを適用して返す
+ * @param {Date} date
+ * @param {boolean} isHoliday
+ * @param {Object} overrides - { "2026-04-02": { breakfast: "SHOTA", dinner: "RENA" } }
+ */
+export function getDutyWithOverrides(date, isHoliday, overrides = {}) {
+  const duty = getDuty(date, isHoliday);
+  const dateKey = date.toISOString().slice(0, 10);
+  const dayOverride = overrides[dateKey] || {};
+  return {
+    breakfast: dayOverride.breakfast ? PERSON_MAP[dayOverride.breakfast] : duty.breakfast,
+    lunch: dayOverride.lunch ? PERSON_MAP[dayOverride.lunch] : duty.lunch,
+    dinner: dayOverride.dinner ? PERSON_MAP[dayOverride.dinner] : duty.dinner,
+  };
+}
+
+/**
+ * meal の次の担当（SHOTA→RENA→SHOTA、朝食のみEACHも含む）
+ */
+export function nextPerson(currentKey, meal) {
+  if (meal === 'breakfast') {
+    const cycle = ['EACH', 'SHOTA', 'RENA'];
+    const idx = cycle.indexOf(currentKey);
+    return cycle[(idx + 1) % cycle.length];
+  }
+  return currentKey === 'SHOTA' ? 'RENA' : 'SHOTA';
+}
+
+/**
+ * person オブジェクト → キー文字列
+ */
+export function personToKey(person) {
+  if (person === SHOTA) return 'SHOTA';
+  if (person === RENA) return 'RENA';
+  return 'EACH';
+}
+
 export { DAYS, SHOTA, RENA, EACH };
